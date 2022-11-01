@@ -9,8 +9,8 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"github.com/tetratelabs/wazero/sys"
-	"github.com/tetratelabs/wazero/wasi_snapshot_preview1"
 )
 
 // greetWasm was compiled by `zig build`
@@ -32,16 +32,13 @@ func run() error {
 	ctx := context.Background()
 
 	// Create a new WebAssembly Runtime.
-	r := wazero.NewRuntimeWithConfig(wazero.NewRuntimeConfig().
-		// Enable WebAssembly 2.0 support.
-		WithWasmCore2(),
-	)
+	r := wazero.NewRuntime(ctx)
 	defer r.Close(ctx) // This closes everything this Runtime created.
 
 	// Instantiate a Go-defined module named "env" that exports a function to
 	// log to the console.
-	_, err := r.NewModuleBuilder("env").
-		ExportFunction("log", logString).
+	_, err := r.NewHostModuleBuilder("env").
+		NewFunctionBuilder().WithFunc(logString).Export("log").
 		Instantiate(ctx, r)
 	if err != nil {
 		return err
@@ -55,7 +52,7 @@ func run() error {
 
 	// Instantiate a WebAssembly module that imports the "log" function defined
 	// in "env" and exports "memory" and functions we'll use in this example.
-	compiled, err := r.CompileModule(ctx, greetWasm, wazero.NewCompileConfig())
+	compiled, err := r.CompileModule(ctx, greetWasm)
 	if err != nil {
 		return err
 	}
